@@ -65,13 +65,15 @@ def claim_faucet(wallet_address):
     driver.get(SOMNIA_TESTNET_URL)
     time.sleep(random.uniform(2, 5))  # Human-like delay
     try:
-        # Click "Request Tokens" button
+        # Wait for and locate the "Request Tokens" button
         request_button = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Request Tokens')]"))
+            EC.visibility_of_element_located((By.XPATH, "//button[contains(text(), 'Request Tokens') or contains(@class, 'testnet-request-tokens')]"))
         )
-        driver.execute_script("arguments[0].scrollIntoView();", request_button)
-        time.sleep(random.uniform(1, 2))
-        request_button.click()
+        driver.execute_script("arguments[0].scrollIntoView(true);", request_button)  # Scroll to top of element
+        # Ensure button is clickable with additional wait
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((request_button)))
+        # Force click to bypass overlap
+        driver.execute_script("arguments[0].click();", request_button)
         print(f"Clicked 'Request Tokens' for {wallet_address}")
 
         # Wait for the popup modal
@@ -82,11 +84,11 @@ def claim_faucet(wallet_address):
 
         # Click "Get STT" button in the popup
         get_stt_button = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Get STT')]"))
+            EC.visibility_of_element_located((By.XPATH, "//button[contains(text(), 'Get STT')]"))
         )
-        driver.execute_script("arguments[0].scrollIntoView();", get_stt_button)
-        time.sleep(random.uniform(1, 2))
-        get_stt_button.click()
+        driver.execute_script("arguments[0].scrollIntoView(true);", get_stt_button)
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable((get_stt_button)))
+        driver.execute_script("arguments[0].click();", get_stt_button)
         print(f"Clicked 'Get STT' for {wallet_address}")
 
         # Wait for faucet response
@@ -122,7 +124,6 @@ def send_transaction(wallet_address, private_key):
             EC.visibility_of_element_located((By.XPATH, "//button[contains(text(), 'Send Tokens')]"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", send_button)  # Scroll to top of element
-        # Ensure button is clickable by waiting and forcing click
         WebDriverWait(driver, 20).until(EC.element_to_be_clickable((send_button)))
         driver.execute_script("arguments[0].click();", send_button)  # Force click to bypass overlap
         print(f"Clicked 'Send Tokens' for {wallet_address}")
