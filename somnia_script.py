@@ -1,6 +1,7 @@
 import os
 import time
 import random
+import json
 from web3 import Web3
 from eth_account import Account
 from dotenv import load_dotenv
@@ -15,7 +16,6 @@ import requests
 load_dotenv()
 SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL")  # e.g., https://testnet-rpc.somnia.network
 SOMNIA_TESTNET_URL = "https://testnet.somnia.network/"
-PRIVATE_KEYS = os.getenv("PRIVATE_KEYS").split(",")
 CHAIN_ID = int(os.getenv("CHAIN_ID", "Your_Chain_ID"))  # Replace with actual Chain ID
 
 # Initialize Web3
@@ -27,8 +27,14 @@ if not w3.is_connected():
 chrome_options = Options()
 chrome_options.add_argument("--headless")  # Run in background
 chrome_options.add_argument("--no-sandbox")
-chrome_options.add_argument("--disable-dev-shm-usage")
+chrome_options.add_argument("--disable-dev-shm_usage")
 driver = webdriver.Chrome(options=chrome_options)
+
+# Load wallets from wallets.json
+def load_wallets():
+    with open("wallets.json", "r") as f:
+        wallets = json.load(f)
+    return wallets
 
 # Function to add network (manual step or via wallet API if available)
 def add_testnet():
@@ -74,10 +80,10 @@ def claim_faucet(wallet_address):
         print(f"Failed to claim STT for {wallet_address}: {e}")
 
 # Function to send a transaction (to a burn address or Testnet default)
-def send_transaction(from_private_key, amount):
-    account = Account.from_key(from_private_key)
+def send_transaction(private_key, amount):
+    account = Account.from_key(private_key)
     nonce = w3.eth.get_transaction_count(account.address)
-    # Use a burn address or Testnet default (avoid other wallets)
+    # Use a burn address to avoid interaction between wallets
     burn_address = "0x000000000000000000000000000000000000dEaD"
     tx = {
         "nonce": nonce,
@@ -87,7 +93,7 @@ def send_transaction(from_private_key, amount):
         "gasPrice": w3.to_wei(str(random.uniform(20, 50)), "gwei"),  # Random gas price
         "chainId": CHAIN_ID,
     }
-    signed_tx = w3.eth.account.sign_transaction(tx, from_private_key)
+    signed_tx = w3.eth.account.sign_transaction(tx, private_key)
     tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
     print(f"Transaction sent to burn address: {tx_hash.hex()}")
     time.sleep(random.uniform(3, 6))  # Human-like delay
@@ -96,9 +102,10 @@ def send_transaction(from_private_key, amount):
 # Main function to run tasks for multiple accounts
 def run_somnia_tasks():
     add_testnet()  # Initial network setup (manual or automated via wallet)
-    for private_key in PRIVATE_KEYS[:100]:  # Limit to 100 accounts
-        account = Account.from_key(private_key)
-        wallet_address = account.address
+    wallets = load_wallets()
+    for wallet in wallets[:100]:  # Limit to 100 accounts
+        wallet_address = wallet["address"]
+        private_key = wallet["private_key"]
 
         # Claim STT tokens with human-like behavior
         claim_faucet(wallet_address)
@@ -121,4 +128,3 @@ if __name__ == "__main__":
     while True:
         run_somnia_tasks()
         time.sleep(86400)  # Wait 24 hours
-
