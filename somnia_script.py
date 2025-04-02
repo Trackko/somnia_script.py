@@ -15,7 +15,7 @@ import requests
 
 # Load environment variables
 load_dotenv()
-SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL", "https://rpc.somnia.network")  # Default to official RPC
+SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL", "https://rpc.ankr.com/somnia_testnet/6e3fd81558cf77b928b06b38e9409b4677b637118114e83364486294d5ff4811")  # Default to Ankr RPC
 SOMNIA_TESTNET_URL = "https://testnet.somnia.network/"
 CHAIN_ID_STR = os.getenv("CHAIN_ID", "50312")  # Default to Somnia Testnet Chain ID
 try:
@@ -23,7 +23,7 @@ try:
 except ValueError as e:
     raise ValueError(f"Invalid CHAIN_ID value '{CHAIN_ID_STR}'. Please set a numeric Chain ID (e.g., 50312).") from e
 
-# Initialize Web3 with retry logic and fallback RPC
+# Initialize Web3 with retry logic
 w3 = Web3(Web3.HTTPProvider(SOMNIA_RPC_URL))
 max_attempts = 3
 for attempt in range(max_attempts):
@@ -33,18 +33,7 @@ for attempt in range(max_attempts):
     print(f"Attempt {attempt + 1} of {max_attempts} failed to connect. Retrying in 2 seconds...")
     time.sleep(2)  # Wait 2 seconds before retry
 else:
-    fallback_rpc = "https://50312.rpc.thirdweb.com"  # Fallback RPC
-    print(f"Switching to fallback RPC: {fallback_rpc}")
-    w3 = Web3(Web3.HTTPProvider(fallback_rpc))
-    for attempt in range(max_attempts):
-        if w3.is_connected():
-            print(f"Successfully connected to Somnia Testnet at {fallback_rpc}")
-            SOMNIA_RPC_URL = fallback_rpc  # Update for consistency
-            break
-        print(f"Attempt {attempt + 1} of {max_attempts} failed on fallback. Retrying in 2 seconds...")
-        time.sleep(2)
-    else:
-        raise Exception(f"Failed to connect to Somnia Testnet at {SOMNIA_RPC_URL} or {fallback_rpc} after {max_attempts} attempts. Check RPC URLs or network status.")
+    raise Exception(f"Failed to connect to Somnia Testnet at {SOMNIA_RPC_URL} after {max_attempts} attempts. Check RPC URL or network status.")
 
 # Set up Selenium with human-like behavior
 chrome_options = Options()
@@ -85,10 +74,11 @@ def claim_faucet(wallet_address):
         request_button.click()
         print(f"Clicked 'Request Tokens' for {wallet_address}")
 
-        # Wait for and switch to the popup
-        WebDriverWait(driver, 20).until(EC.alert_is_present())
-        popup = driver.switch_to.alert  # Switch to the popup (assuming it's an alert or modal)
-        time.sleep(random.uniform(1, 3))  # Wait for popup to stabilize
+        # Wait for the popup modal (not an alert)
+        WebDriverWait(driver, 20).until(
+            EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup')]//input[@value='{wallet_address}']".format(wallet_address=wallet_address)))
+        )
+        time.sleep(random.uniform(1, 3))  # Wait for modal to stabilize
 
         # Click "Get STT" button in the popup
         get_stt_button = WebDriverWait(driver, 20).until(
@@ -104,9 +94,11 @@ def claim_faucet(wallet_address):
         print(f"Successfully claimed STT for {wallet_address}")
     except Exception as e:
         print(f"Failed to claim STT for {wallet_address}: {str(e)}")
-        # Attempt to close the popup if it exists
+        # Attempt to close the modal if it exists
         try:
-            driver.switch_to.alert.dismiss()
+            close_button = driver.find_elements(By.XPATH, "//button[contains(text(), 'Close') or @class='close']")
+            if close_button:
+                close_button[0].click()
         except:
             pass
 
@@ -134,9 +126,11 @@ def send_transaction(wallet_address, private_key):
         send_button.click()
         print(f"Clicked 'Send Tokens' for {wallet_address}")
 
-        # Wait for and switch to the popup
-        WebDriverWait(driver, 20).until(EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'popup')]")))
-        time.sleep(random.uniform(1, 3))  # Wait for popup to stabilize
+        # Wait for and switch to the popup modal
+        WebDriverWait(driver, 20).until(
+            EC.visibility_of_element_located((By.XPATH, "//div[contains(@class, 'modal') or contains(@class, 'popup')]"))
+        )
+        time.sleep(random.uniform(1, 3))  # Wait for modal to stabilize
 
         # Select random amount between 0.015 and 0.09 STT
         amount = round(random.uniform(0.015, 0.09), 3)  # Ensure 3 decimal places
@@ -171,9 +165,11 @@ def send_transaction(wallet_address, private_key):
         print(f"Successfully sent {amount} STT to {random_address} from {wallet_address}")
     except Exception as e:
         print(f"Failed to send transaction for {wallet_address}: {str(e)}")
-        # Attempt to close the popup if it exists
+        # Attempt to close the modal if it exists
         try:
-            driver.switch_to.alert.dismiss()
+            close_button = driver.find_elements(By.XPATH, "//button[contains(text(), 'Close') or @class='close']")
+            if close_button:
+                close_button[0].click()
         except:
             pass
 
