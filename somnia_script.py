@@ -10,6 +10,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
 import requests
 
 # Load environment variables
@@ -75,31 +76,39 @@ def claim_faucet(wallet_address):
     driver.get(SOMNIA_TESTNET_URL)
     time.sleep(random.uniform(2, 5))  # Human-like delay
     try:
-        # Connect wallet (simulate button click if required)
-        connect_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Connect')]"))
-        )
-        connect_button.click()
-        time.sleep(random.uniform(3, 6))  # Mimic manual connection
-
-        # Input wallet address or connect MetaMask (manual step might be needed)
-        address_field = driver.find_elements(By.XPATH, "//input[@type='text']")
-        if address_field:
-            address_field[0].send_keys(wallet_address)
-            time.sleep(random.uniform(1, 3))
-
         # Click "Request Tokens" button
-        request_button = WebDriverWait(driver, 10).until(
+        request_button = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Request Tokens')]"))
         )
         driver.execute_script("arguments[0].scrollIntoView();", request_button)
         time.sleep(random.uniform(1, 2))
         request_button.click()
-        time.sleep(random.uniform(5, 10))  # Wait for faucet response
+        print(f"Clicked 'Request Tokens' for {wallet_address}")
 
+        # Wait for and switch to the popup
+        WebDriverWait(driver, 20).until(EC.alert_is_present())
+        popup = driver.switch_to.alert  # Switch to the popup (assuming it's an alert or modal)
+        time.sleep(random.uniform(1, 3))  # Wait for popup to stabilize
+
+        # Click "Get STT" button in the popup
+        get_stt_button = WebDriverWait(driver, 20).until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(text(), 'Get STT')]"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView();", get_stt_button)
+        time.sleep(random.uniform(1, 2))
+        get_stt_button.click()
+        print(f"Clicked 'Get STT' for {wallet_address}")
+
+        # Wait for faucet response
+        time.sleep(random.uniform(5, 10))
         print(f"Successfully claimed STT for {wallet_address}")
     except Exception as e:
-        print(f"Failed to claim STT for {wallet_address}: {e}")
+        print(f"Failed to claim STT for {wallet_address}: {str(e)}")
+        # Attempt to close the popup if it exists
+        try:
+            driver.switch_to.alert.dismiss()
+        except:
+            pass
 
 # Function to send a transaction (to a burn address or Testnet default)
 def send_transaction(private_key, amount):
@@ -116,7 +125,7 @@ def send_transaction(private_key, amount):
         "chainId": CHAIN_ID,
     }
     signed_tx = w3.eth.account.sign_transaction(tx, private_key)
-    tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+    tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)  # Corrected attribute
     print(f"Transaction sent to burn address: {tx_hash.hex()}")
     time.sleep(random.uniform(3, 6))  # Human-like delay
     return tx_hash
