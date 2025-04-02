@@ -30,7 +30,7 @@ chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm_usage")
 driver = webdriver.Chrome(options=chrome_options)
 
-# Load wallets from wallets.json
+# Load wallets from wallets.json in the repository
 def load_wallets():
     with open("wallets.json", "r") as f:
         wallets = json.load(f)
