@@ -16,7 +16,11 @@ import requests
 load_dotenv()
 SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL")  # e.g., https://testnet-rpc.somnia.network
 SOMNIA_TESTNET_URL = "https://testnet.somnia.network/"
-CHAIN_ID = int(os.getenv("CHAIN_ID", "Your_Chain_ID"))  # Replace with actual Chain ID
+CHAIN_ID_STR = os.getenv("CHAIN_ID", "12345")  # Default to 12345 (adjust based on Somnia docs)
+try:
+    CHAIN_ID = int(CHAIN_ID_STR)  # Convert to integer with error handling
+except ValueError as e:
+    raise ValueError(f"Invalid CHAIN_ID value '{CHAIN_ID_STR}'. Please set a numeric Chain ID (e.g., 12345) in your environment or secrets.") from e
 
 # Initialize Web3
 w3 = Web3(Web3.HTTPProvider(SOMNIA_RPC_URL))
