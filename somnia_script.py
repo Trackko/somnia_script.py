@@ -14,18 +14,36 @@ import requests
 
 # Load environment variables
 load_dotenv()
-SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL")  # e.g., https://testnet-rpc.somnia.network
+SOMNIA_RPC_URL = os.getenv("SOMNIA_RPC_URL", "https://rpc.somnia.network")  # Default to official RPC
 SOMNIA_TESTNET_URL = "https://testnet.somnia.network/"
-CHAIN_ID_STR = os.getenv("CHAIN_ID", "12345")  # Default to 12345 (adjust based on Somnia docs)
+CHAIN_ID_STR = os.getenv("CHAIN_ID", "50312")  # Default to Somnia Testnet Chain ID
 try:
     CHAIN_ID = int(CHAIN_ID_STR)  # Convert to integer with error handling
 except ValueError as e:
-    raise ValueError(f"Invalid CHAIN_ID value '{CHAIN_ID_STR}'. Please set a numeric Chain ID (e.g., 12345) in your environment or secrets.") from e
+    raise ValueError(f"Invalid CHAIN_ID value '{CHAIN_ID_STR}'. Please set a numeric Chain ID (e.g., 50312).") from e
 
-# Initialize Web3
+# Initialize Web3 with retry logic and fallback RPC
 w3 = Web3(Web3.HTTPProvider(SOMNIA_RPC_URL))
-if not w3.is_connected():
-    raise Exception("Failed to connect to Somnia Testnet")
+max_attempts = 3
+for attempt in range(max_attempts):
+    if w3.is_connected():
+        print(f"Successfully connected to Somnia Testnet at {SOMNIA_RPC_URL}")
+        break
+    print(f"Attempt {attempt + 1} of {max_attempts} failed to connect. Retrying in 2 seconds...")
+    time.sleep(2)  # Wait 2 seconds before retry
+else:
+    fallback_rpc = "https://50312.rpc.thirdweb.com"  # Fallback RPC
+    print(f"Switching to fallback RPC: {fallback_rpc}")
+    w3 = Web3(Web3.HTTPProvider(fallback_rpc))
+    for attempt in range(max_attempts):
+        if w3.is_connected():
+            print(f"Successfully connected to Somnia Testnet at {fallback_rpc}")
+            SOMNIA_RPC_URL = fallback_rpc  # Update for consistency
+            break
+        print(f"Attempt {attempt + 1} of {max_attempts} failed on fallback. Retrying in 2 seconds...")
+        time.sleep(2)
+    else:
+        raise Exception(f"Failed to connect to Somnia Testnet at {SOMNIA_RPC_URL} or {fallback_rpc} after {max_attempts} attempts. Check RPC URLs or network status.")
 
 # Set up Selenium with human-like behavior
 chrome_options = Options()
@@ -47,7 +65,7 @@ def add_testnet():
         "chainName": "Somnia Testnet",
         "rpcUrls": [SOMNIA_RPC_URL],
         "nativeCurrency": {"name": "STT", "symbol": "STT", "decimals": 18},
-        "blockExplorerUrls": ["https://testnet.somnia.network/explorer"]
+        "blockExplorerUrls": ["https://somnia-testnet.socialscan.io"]
     }
     print("Network data prepared. Add this to your wallet manually if not pre-configured.")
     return network_data
