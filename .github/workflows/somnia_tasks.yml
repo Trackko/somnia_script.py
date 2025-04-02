@@ -17,5 +17,8 @@ jobs:
       - run: |
           echo "SOMNIA_RPC_URL=${{ secrets.SOMNIA_RPC_URL }}" >> $GITHUB_ENV
           echo "CHAIN_ID=${{ secrets.CHAIN_ID }}" >> $GITHUB_ENV
-          echo "PRIVATE_KEYS=${{ secrets.PRIVATE_KEYS }}" >> $GITHUB_ENV
+      - uses: actions/upload-artifact@v3
+        with:
+          name: wallets
+          path: wallets.json
       - run: python somnia_script.py
