@@ -1,0 +1,21 @@
+name: Somnia Testnet Tasks
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  run_tasks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - run: pip install web3 requests python-dotenv selenium webdriver-manager
+      - run: |
+          echo "SOMNIA_RPC_URL=${{ secrets.SOMNIA_RPC_URL }}" >> $GITHUB_ENV
+          echo "CHAIN_ID=${{ secrets.CHAIN_ID }}" >> $GITHUB_ENV
+          echo "PRIVATE_KEYS=${{ secrets.PRIVATE_KEYS }}" >> $GITHUB_ENV
+      - run: python somnia_script.py
